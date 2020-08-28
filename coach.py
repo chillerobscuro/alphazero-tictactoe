@@ -1,8 +1,9 @@
 from mcts import MCTS
 import numpy as np
+from random import shuffle
 
 
-class Coach():
+class Coach:
     """
     """
     def __init__(self, game, nnet, args):
@@ -11,7 +12,10 @@ class Coach():
         self.pnet = self.nnet.__class__(self.game)  # the competitor network
         self.args = args
         self.mcts = MCTS(self.game, self.nnet, self.args)
-        self.trainExamplesHistory = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
+        self.num_iters = 3
+        self.num_eps = 5
+        self.temp_thresh = 5
+        self.train_examples_history = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
 
     def execute_episode(self):
         training_examples = []
@@ -21,7 +25,7 @@ class Coach():
 
         while True:
             episode_step += 1
-            temp = int(episode_step < self.args.tempThreshold)
+            temp = int(episode_step < self.temp_thresh)
             canon_board = self.game.get_canonical_board(board, self.current_player)
             # calculate action probs
             pi = self.mcts.get_action_probs(canon_board, temp=temp)  # returns todo which 2 things?
@@ -34,3 +38,33 @@ class Coach():
                 # return examples in form [board, policies, reward (flipped to match current_player)]
                 examples_w_rewards = [(x[0], x[2], reward * ((-1)**(x[1] != self.current_player))) for x in training_examples]
                 return examples_w_rewards
+
+    def learn(self):
+        """
+        Performs numIters iterations with numEps episodes of self-play in each
+        iteration. After every iteration, it retrains neural network with
+        examples in trainExamples (which has a maximum length of maxlenofQueue).
+        It then pits the new neural network against the old one and accepts it
+        only if it wins >= updateThreshold fraction of games.
+        """
+
+        for i in range(1, self.num_iters + 1):
+            # examples of the iteration
+            iteration_train_examples = []
+
+            for _ in range(self.num_eps):
+                self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
+                iteration_train_examples += self.execute_episode()
+
+            # save the iteration examples to the history
+            self.train_examples_history.append(iteration_train_examples)
+
+            # shuffle examples before training
+            train_examples = []
+            for e in self.train_examples_history:
+                train_examples.extend(e)
+            shuffle(train_examples)
+            # pmcts = MCTS(self.game, self.pnet, self.args)
+
+            self.nnet.train(train_examples)
+            nmcts = MCTS(self.game, self.nnet, self.args)

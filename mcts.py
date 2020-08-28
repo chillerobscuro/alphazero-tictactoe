@@ -7,13 +7,12 @@ class MCTS():
     Monte Carlo Tree Search Class
     """
 
-    def __init__(self, game, nnet, args, num_mcts_sims=10, cpct=.5, temp=.5):
+    def __init__(self, game, nnet, args, num_mcts_sims=10, cpct=.5):
         self.game = game
         self.nnet = nnet
         self.args = args
         self.cpct = cpct
         self.num_mcts_sims = num_mcts_sims
-        self.temp = temp
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}  # stores #times edge s,a was visited
         self.Ns = {}   # stores #times board s was visited
@@ -22,7 +21,7 @@ class MCTS():
         self.Es = {}   # stores game.getGameEnded ended for board s
         self.Vs = {}   # stores game.getValidMoves for board s
 
-    def get_action_probs(self, canonical_board):
+    def get_action_probs(self, canonical_board, temp):
         """
         This function performs num_mcts_sims simulations of MCTS starting from
         canonicalBoard.
@@ -36,21 +35,19 @@ class MCTS():
 
         s = self.game.string_rep(canonical_board)
         # for each possible action, return the count we've taken it from this state
-        counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(self.game.getActionSize())]
+        counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(self.game.get_action_size())]
 
-        if self.temp == 0:  # Just pick the action we've taken from the state most often
+        if temp == 0:  # Just pick the action we've taken from the state most often
             best_actions = np.array(np.argwhere(counts == np.max(counts))).flatten()
             best_a = np.random.choice(best_actions)  # if we've been to 2 states the most, pick one randomly
             probs = [0] * len(counts)
             probs[best_a] = 1
             return probs  # return array where prob of best move is 100, rest 0
 
-        counts = [x ** (1. / self.temp) for x in counts]
+        counts = [x ** (1. / temp) for x in counts]  # use temp to explore less known actions
         counts_sum = float(sum(counts))
         probs = [x / counts_sum for x in counts]
         return probs
-
-
 
     def search(self, canonical_board):
         """
@@ -79,12 +76,13 @@ class MCTS():
 
         if s not in self.Ps:  # we haven't calculated policy for this state yet
             self.Ps[s], v = self.nnet.predict(canonical_board)  # return policy vector, value of current board
-            valid_moves = self.game.get_valid_moves(canonical_board, 1)  # return binary array of which moves allowed
+            valid_moves = self.game.get_valid_moves(canonical_board)  # return binary array of which moves allowed
             self.Ps[s] = self.Ps[s] * valid_moves  # mask invalid moves
             sum_this_state_policy = np.sum(self.Ps[s])
             if sum_this_state_policy > 0:
                 self.Ps[s] /= sum_this_state_policy  # renormalize policy vector
             else:
+                print('ssss', s)
                 print('oh no there are no valid moves you dumb bish')
 
             self.Vs[s] = valid_moves  # store valid moves from this board state
@@ -96,7 +94,7 @@ class MCTS():
         current_best = -100
         best_action = -1
         # compute Upper Confidence Bound and pick action with highest value
-        for a in range(self.game.get_action_size()):
+        for a in range(self.game.get_action_size() - 1):
             if valid_moves[a]:  # if this move is allowed
                 if (s, a) in self.Qsa:  # if we've already calculated Q values for this board state and action,
                                         # then we just need to update the Q value in line
@@ -116,7 +114,7 @@ class MCTS():
         v = self.search(next_canonical_board)  # this will be called recursively until self.search returns game value
 
         if (s, a) in self.Qsa:  # We have q values for this board and move so just update
-            self.Qsa[(s, a)] = (self.Nsa[(s, a)] * self.Qsa[s, a] + v) / self.Nsa[(s, a) + 1]
+            self.Qsa[(s, a)] = (self.Nsa[(s, a)] * self.Qsa[s, a] + v) / self.Nsa[(s, a)] + 1
             self.Nsa[(s, a)] += 1
 
         else:
@@ -124,6 +122,6 @@ class MCTS():
             self.Nsa[(s, a)] = 1
 
         self.Ns[s] += 1
-        return -v  # Note that we return the negative value of the state. This is because alternate levels in the search
-                   # tree are from the perspective of different players. Since v∈[−1,1], −v is the value of the current
-                   # board from the perspective of the other player.
+        return -v   # From paper: Note that we return the negative value of the state. This is because alternate levels
+                    # in the search tree are from the perspective of different players. Since v∈[−1,1], −v is the value
+                    # of the current board from the perspective of the other player.
