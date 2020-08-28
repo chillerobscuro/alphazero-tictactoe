@@ -10,5 +10,5 @@ class NN:
         return [q/s for q in pol], np.random.rand()
 
     def train(self, train_examples):
-        print('time to train the network!')
+        print('\n=====Iteration done, time to train the network!=====\n')
         pass

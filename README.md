@@ -8,4 +8,6 @@ Less extensible!
 
 More comments in the code!
 
+No need for GPU!
+
 Good times

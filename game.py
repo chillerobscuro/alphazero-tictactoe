@@ -3,7 +3,7 @@ import numpy as np
 
 class Game:
     """
-    TicTacToe
+    TicTacToe game class
     """
 
     def __init__(self, size=3):

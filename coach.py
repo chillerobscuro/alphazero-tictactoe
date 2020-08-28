@@ -12,10 +12,10 @@ class Coach:
         self.pnet = self.nnet.__class__(self.game)  # the competitor network
         self.args = args
         self.mcts = MCTS(self.game, self.nnet, self.args)
-        self.num_iters = 3
-        self.num_eps = 5
+        self.num_iters = 2
+        self.num_eps = 3
         self.temp_thresh = 5
-        self.train_examples_history = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
+        self.train_examples_history = []  # history of examples from numItersForTrainExamplesHistory latest iterations
 
     def execute_episode(self):
         training_examples = []
@@ -25,17 +25,18 @@ class Coach:
 
         while True:
             episode_step += 1
-            temp = int(episode_step < self.temp_thresh)
+            temp = int(episode_step < self.temp_thresh)  # todo why
             canon_board = self.game.get_canonical_board(board, self.current_player)
+            print(f'\tep step {episode_step}, get action probs for board\n {self.game.get_canonical_board(board, 1)}')
             # calculate action probs
-            pi = self.mcts.get_action_probs(canon_board, temp=temp)  # returns todo which 2 things?
+            pi = self.mcts.get_action_probs(canon_board, temp=temp)  # returns probability vector
             # todo get symmetries
             training_examples.append([canon_board, self.current_player, pi, None])
             chosen_action = np.random.choice(len(pi), p=pi)
             board, self.current_player = self.game.get_next_state(board, self.current_player, chosen_action)
             reward = self.game.check_game_ended(board, self.current_player)
-            if reward != 0:
-                # return examples in form [board, policies, reward (flipped to match current_player)]
+            if reward != 0:  # return examples in form [board, policies, reward (flipped to match current_player)]
+                print(f'\tep step {episode_step}, game ended! \n {self.game.get_canonical_board(board, 1)}')
                 examples_w_rewards = [(x[0], x[2], reward * ((-1)**(x[1] != self.current_player))) for x in training_examples]
                 return examples_w_rewards
 
@@ -53,6 +54,7 @@ class Coach:
             iteration_train_examples = []
 
             for _ in range(self.num_eps):
+                print(f'\non iteration {i} ep {_+1}, executing episode')
                 self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
                 iteration_train_examples += self.execute_episode()
 

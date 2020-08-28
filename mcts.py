@@ -7,7 +7,7 @@ class MCTS():
     Monte Carlo Tree Search Class
     """
 
-    def __init__(self, game, nnet, args, num_mcts_sims=10, cpct=.5):
+    def __init__(self, game, nnet, args, num_mcts_sims=3, cpct=.5):
         self.game = game
         self.nnet = nnet
         self.args = args
@@ -31,6 +31,7 @@ class MCTS():
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         for i in range(self.num_mcts_sims):
+            print('\t\tMCTS for action probs')
             self.search(canonical_board)
 
         s = self.game.string_rep(canonical_board)
@@ -44,7 +45,7 @@ class MCTS():
             probs[best_a] = 1
             return probs  # return array where prob of best move is 100, rest 0
 
-        counts = [x ** (1. / temp) for x in counts]  # use temp to explore less known actions
+        counts = [x ** (1. / temp) for x in counts]  # use temp to explore less known actions (does nothing different?)
         counts_sum = float(sum(counts))
         probs = [x / counts_sum for x in counts]
         return probs
@@ -72,6 +73,7 @@ class MCTS():
         if s not in self.Es:  # haven't checked if game ended here yet
             self.Es[s] = self.game.check_game_ended(canonical_board, 1)  # player always 1 because canonical board
         if self.Es[s] != 0:  # game ended, so we have reached a terminal node, return and break recursive self.search()
+            print('\t\t\t---simulated game ended---')
             return -self.Es[s]  # return game value
 
         if s not in self.Ps:  # we haven't calculated policy for this state yet
@@ -82,13 +84,11 @@ class MCTS():
             if sum_this_state_policy > 0:
                 self.Ps[s] /= sum_this_state_policy  # renormalize policy vector
             else:
-                print('ssss', s)
-                print('oh no there are no valid moves you dumb bish')
+                print(f'oh no there are no valid moves, you dumb! board: {s}')
 
             self.Vs[s] = valid_moves  # store valid moves from this board state
             self.Ns[s] = 0  # initialize count of how many times we've been in this state
             return -v  # value of board from other player's perspective # but why?
-
 
         valid_moves = self.Vs[s]
         current_best = -100
@@ -111,6 +111,7 @@ class MCTS():
         next_s, next_player = self.game.get_next_state(canonical_board, 1, a)
         next_canonical_board = self.game.get_canonical_board(next_s, next_player)
 
+        print('\t\t\tRecursively calling node search again')
         v = self.search(next_canonical_board)  # this will be called recursively until self.search returns game value
 
         if (s, a) in self.Qsa:  # We have q values for this board and move so just update
