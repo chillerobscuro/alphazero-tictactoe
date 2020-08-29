@@ -1,15 +1,15 @@
 from game import Game
-from nn import NN
+from nn import NNWrapper
 from coach import Coach
+from utils import printstr
 
-from_dir = 0
 
 def main():
     g = Game()
     if load_model:
-        nn = from_dir
+        nn = ''
     else:
-        nn = NN(g)
+        nn = NNWrapper(g)
     args = []
     c = Coach(g, nn, args)
     c.learn()
@@ -17,10 +17,13 @@ def main():
 
 
 if __name__ == '__main__':
-    print('''\n    ===========================================================
-    ===========================================================
-    ==================== Running AlphaZero ====================
-    ===========================================================
-    ===========================================================\n''')
+    print(printstr)
     load_model = 0
     main()
+
+'''
+todo - 
+make nn
+make human player
+add arguments from command line
+'''

@@ -31,7 +31,7 @@ class MCTS():
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         for i in range(self.num_mcts_sims):
-            print('\t\tMCTS for action probs')
+            print('\t\tRunning MCTS for action probs')
             self.search(canonical_board)
 
         s = self.game.string_rep(canonical_board)
@@ -94,7 +94,7 @@ class MCTS():
         current_best = -100
         best_action = -1
         # compute Upper Confidence Bound and pick action with highest value
-        for a in range(self.game.get_action_size() - 1):
+        for a in range(self.game.get_action_size()):
             if valid_moves[a]:  # if this move is allowed
                 if (s, a) in self.Qsa:  # if we've already calculated Q values for this board state and action,
                                         # then we just need to update the Q value in line
@@ -111,7 +111,7 @@ class MCTS():
         next_s, next_player = self.game.get_next_state(canonical_board, 1, a)
         next_canonical_board = self.game.get_canonical_board(next_s, next_player)
 
-        print('\t\t\tRecursively calling node search again')
+        # print('\t\t\tRecursively calling node search again')
         v = self.search(next_canonical_board)  # this will be called recursively until self.search returns game value
 
         if (s, a) in self.Qsa:  # We have q values for this board and move so just update

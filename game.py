@@ -6,7 +6,7 @@ class Game:
     TicTacToe game class
     """
 
-    def __init__(self, size=3):
+    def __init__(self, size=5):
         self.size = size
         self.winning_inds = self.get_winning_inds()
 
@@ -30,7 +30,7 @@ class Game:
         Returns:
             actionSize: number of all possible actions
         """
-        return self.size**2 + 1  # todo why the + 1?
+        return self.size**2
 
     def get_next_state(self, board, player, action):
         """
@@ -120,7 +120,19 @@ class Game:
                        form of the board and the corresponding pi vector. This
                        is used when training the neural network from examples.
         """
-        pass
+        assert (len(pi) == self.size ** 2)
+        pi_board = np.reshape(pi, (self.size, self.size))
+        symmetrical_training_examples = []
+
+        for i in range(1, 5):
+            for j in [True, False]:
+                new_b = np.rot90(board, i)      # flip the board 90 degrees 8 times
+                new_pi = np.rot90(pi_board, i)  # do the same for p vector
+                if j:                           # half of the time we'll mirror the board (and vector)
+                    new_b = np.fliplr(new_b)
+                    new_pi = np.fliplr(new_pi)
+                symmetrical_training_examples += [(new_b, list(new_pi.ravel()))]
+        return symmetrical_training_examples    # returns 8 symmetrical iterations for every game state
 
     def string_rep(self, board):
         """

@@ -30,8 +30,9 @@ class Coach:
             print(f'\tep step {episode_step}, get action probs for board\n {self.game.get_canonical_board(board, 1)}')
             # calculate action probs
             pi = self.mcts.get_action_probs(canon_board, temp=temp)  # returns probability vector
-            # todo get symmetries
-            training_examples.append([canon_board, self.current_player, pi, None])
+            symms = self.game.get_symmetries(canon_board, pi)
+            # add all symmetrical boards to training examples
+            training_examples.extend([[s[0], self.current_player, s[1], None] for s in symms])
             chosen_action = np.random.choice(len(pi), p=pi)
             board, self.current_player = self.game.get_next_state(board, self.current_player, chosen_action)
             reward = self.game.check_game_ended(board, self.current_player)
